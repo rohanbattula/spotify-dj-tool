@@ -2,6 +2,7 @@ const express = require('express');
 const passport = require('passport');
 const SpotifyStrategy = require('passport-spotify').Strategy;
 const session = require('express-session');
+require('dotenv').config();
 
 const app = express();
 
@@ -14,8 +15,8 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-CLIENT_ID = 'af1ac596d80b4149a07c3818a52ad19f'
-CLIENT_SECRET = '2bf779decea141b99a924ef86c7001d0'
+CLIENT_ID = process.env.CLIENT_ID
+CLIENT_SECRET = process.env.CLIENT_SECRET
 const REDIRECT_URI = 'http://localhost:8888/callback';
 
 passport.use(new SpotifyStrategy({
