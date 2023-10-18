@@ -2,6 +2,11 @@ const express = require('express');
 const passport = require('passport');
 const SpotifyStrategy = require('passport-spotify').Strategy;
 const session = require('express-session');
+const mongoose = require("mongoose");
+
+
+mongoose.set("strictQuery", false);
+
 require('dotenv').config();
 
 const app = express();
@@ -11,6 +16,29 @@ app.use(session({
     resave: true,
     saveUninitialized: true 
 }));
+
+// MONGODB INIT
+
+const mongoDB = "mongodb+srv://rohanbtl:vongvongX2!@kratedigger.xru3nup.mongodb.net/?retryWrites=true&w=majority";
+// Wait for database to connect, logging an error if there is a problem
+main().catch((err) => console.log(err));
+async function main() {
+  await mongoose.connect(mongoDB);
+  console.log("connected to mongo")
+}
+
+const Schema = mongoose.Schema;
+
+const userSchema = new Schema({
+  _id: String,
+  accessToken: String,
+  refreshToken: String,
+});
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+
+const User = mongoose.model('Users', userSchema);
+
+// PASSPORT AUTH
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -27,7 +55,20 @@ passport.use(new SpotifyStrategy({
   function(accessToken, refreshToken, expires_in, profile, done) {
     // Here you could store the profile data in your user database
     // For this example, we'll just forward the profile data
-    profile.accessToken = accessToken;
+    const spotifyId = profile.id
+    const existingUser =  User.findOne({ _id: spotifyId });
+
+    // If the user doesn't exist, create a new one
+    if (!existingUser) {
+      const newUser =  User.create({
+        _id: spotifyId,
+        accessToken: accessToken,
+        refreshToken: refreshToken
+      });
+      console.log("New user saved:", newUser);
+    } else {
+      console.log("User with this Spotify ID already exists.");
+    }
     return done(null, profile);
   }
 ));
@@ -50,8 +91,7 @@ app.get('/callback', passport.authenticate('spotify', { failureRedirect: '/' }),
         // Redirect to React frontend with the user data
         console.log("success redirect")
         
-        res.redirect(`http://localhost:3000/?user=${encodeURIComponent(JSON.stringify(req.user))}`);
-    }
+        res.redirect(`http://localhost:3000/?user=${encodeURIComponent(JSON.stringify(req.user.id))}`);    }
 );
 
 app.get('/logout', function (req, res) {
