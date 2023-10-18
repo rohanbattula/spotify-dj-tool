@@ -19,7 +19,7 @@ app.use(session({
 
 // MONGODB INIT
 
-const mongoDB = "mongodb+srv://rohanbtl:vongvongX2!@kratedigger.xru3nup.mongodb.net/?retryWrites=true&w=majority";
+const mongoDB = process.env.MONGODB_URL
 // Wait for database to connect, logging an error if there is a problem
 main().catch((err) => console.log(err));
 async function main() {
