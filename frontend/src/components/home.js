@@ -1,14 +1,22 @@
 import React, { useState, useEffect } from 'react';
+import LoginPage from './login_page';
+import MainPage from './main_page';
+import styled from "styled-components";
+
+
+const Container = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f0f0f0;
+`;
 
 function Home() {
     const [user, setUser] = useState(null);
 
-    const handleLogin = () => {
-        window.location.href = 'http://localhost:8888/login';
-    }
-    const handleLogout = () => {
-        window.location.href = 'http://localhost:8888/logout';
-    }
+
+
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const userData = urlParams.get('user');
@@ -19,18 +27,15 @@ function Home() {
 
     return (
         <div className="Home">
-            <button onClick={handleLogin}>Login with Spotify</button>
-            {user && (
-                <div>         
-                    <div>
-                        <h2>Welcome {user.displayName}</h2>
-                        
-                        <img src={user.photos[0].value} alt ={user.photos[0].url} width={100} />
+            <Container>
+                {!user && (
+                    <LoginPage/>
+                )}
+                {user && (
+                    <MainPage user={user}/>
+                )}
+            </Container>
 
-                    </div>
-                    <button onClick={handleLogout}>Logout</button>
-                </div>
-            )}
 
         </div>
     );

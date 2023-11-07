@@ -1,66 +1,127 @@
+/**
+ * This example is using the Authorization Code flow.
+ *
+ * In root directory run
+ *
+ *     npm install express
+ *
+ * then run with the followinng command. If you don't have a client_id and client_secret yet,
+ * create an application on Create an application here: https://developer.spotify.com/my-applications to get them.
+ * Make sure you whitelist the correct redirectUri in line 26.
+ *
+ *     node access-token-server.js "<Client ID>" "<Client Secret>"
+ *
+ *  and visit <http://localhost:8888/login> in your Browser.
+ */
+var SpotifyWebApi = require('spotify-web-api-node');
 const express = require('express');
-const passport = require('passport');
-const SpotifyStrategy = require('passport-spotify').Strategy;
-const session = require('express-session');
+const cors = require('cors');
+
 require('dotenv').config();
 
+const scopes = [
+  'ugc-image-upload',
+  'user-read-playback-state',
+  'user-modify-playback-state',
+  'user-read-currently-playing',
+  'streaming',
+  'app-remote-control',
+  'user-read-email',
+  'user-read-private',
+  'playlist-read-collaborative',
+  'playlist-modify-public',
+  'playlist-read-private',
+  'playlist-modify-private',
+  'user-library-modify',
+  'user-library-read',
+  'user-top-read',
+  'user-read-playback-position',
+  'user-read-recently-played',
+  'user-follow-read',
+  'user-follow-modify'
+];
+
+const spotifyApi = new SpotifyWebApi({
+  redirectUri: 'http://localhost:8888/callback',
+  clientId: process.env.CLIENT_ID,
+  clientSecret: process.env.CLIENT_SECRET
+});
+
 const app = express();
+app.use(express.json());  // This middleware is necessary to parse JSON request bodies
+app.use(cors());
 
-app.use(session({ 
-    secret: 'your-session-secret',
-    resave: true,
-    saveUninitialized: true 
-}));
+app.get('/login', (req, res) => {
+  res.redirect(spotifyApi.createAuthorizeURL(scopes));
+});
 
-app.use(passport.initialize());
-app.use(passport.session());
+app.get('/callback', (req, res) => {
+  const error = req.query.error;
+  const code = req.query.code;
+  const state = req.query.state;
 
-CLIENT_ID = process.env.CLIENT_ID
-CLIENT_SECRET = process.env.CLIENT_SECRET
-const REDIRECT_URI = 'http://localhost:8888/callback';
-
-passport.use(new SpotifyStrategy({
-    clientID: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
-    callbackURL: REDIRECT_URI
-  },
-  function(accessToken, refreshToken, expires_in, profile, done) {
-    // Here you could store the profile data in your user database
-    // For this example, we'll just forward the profile data
-    profile.accessToken = accessToken;
-    return done(null, profile);
+  if (error) {
+    console.error('Callback Error:', error);
+    res.send(`Callback Error: ${error}`);
+    return;
   }
-));
 
-passport.serializeUser(function(user, done) {
-    done(null, user);
+  spotifyApi
+    .authorizationCodeGrant(code)
+    .then(data => {
+      const access_token = data.body['access_token'];
+      const refresh_token = data.body['refresh_token'];
+      const expires_in = data.body['expires_in'];
+
+      spotifyApi.setAccessToken(access_token);
+      spotifyApi.setRefreshToken(refresh_token);
+
+      console.log('access_token:', access_token);
+      console.log('refresh_token:', refresh_token);
+
+      console.log(
+        `Sucessfully retreived access token. Expires in ${expires_in} s.`
+      );
+      
+      
+      spotifyApi.getMe()
+      .then(function(data) {
+          let username = data.body.id;
+          res.redirect(`http://localhost:3000/?user=${encodeURIComponent(JSON.stringify(username))}`);
+      });
+
+      setInterval(async () => {
+        const data = await spotifyApi.refreshAccessToken();
+        const access_token = data.body['access_token'];
+
+        console.log('The access token has been refreshed!');
+        console.log('access_token:', access_token);
+        spotifyApi.setAccessToken(access_token);
+      }, expires_in / 2 * 1000);
+    })
+    .catch(error => {
+      console.error('Error getting Tokens:', error);
+      res.send(`Error getting Tokens: ${error}`);
+    });
 });
 
-passport.deserializeUser(function(obj, done) {
-    done(null, obj);
+app.post('/spotify/getPlaylists', (req, res) => {
+  console.log(req.body)
+  const spotifyId = req.body.spotifyId.userId;
+  console.log(spotifyId)
+  spotifyApi.getUserPlaylists(spotifyId)
+    .then(function(data) {
+      console.log('Retrieved playlists', data.body);
+      res.send(data.body)
+    },function(err) {
+      console.log('Something went wrong!', err);
+    });
+  // Get a user's playlists
+ 
 });
 
-app.get('/login', passport.authenticate('spotify', {
-    scope: ['user-read-email', 'user-read-private']
-}));
-
-app.get('/callback', passport.authenticate('spotify', { failureRedirect: '/' }), 
-    function(req, res) {
-        // Successful authentication
-        // Redirect to React frontend with the user data
-        console.log("success redirect")
-        
-        res.redirect(`http://localhost:3000/?user=${encodeURIComponent(JSON.stringify(req.user))}`);
-    }
+app.listen(8888, () =>
+  console.log(
+    'HTTP Server up. Now go to http://localhost:8888/login in your browser.'
+  )
 );
-
-app.get('/logout', function (req, res) {
-    req.logout(function(err) {
-        if (err) { return next(err); }
-        res.redirect('http://localhost:3000');
-        });
-});
-
-app.listen(8888, () => {
-    console.log('Server is running on http://localhost:8888');
-});
