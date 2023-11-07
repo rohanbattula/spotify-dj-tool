@@ -47,7 +47,7 @@ function MainPage({user}){
         <div>         
             {data && (<Sidebar items={data}/>)}
             <div>
-                <h2>fuck you {user}</h2>
+                <h2>welcome{user}</h2>
             </div>
             <button onClick={handleLogout}>Logout</button>
     
