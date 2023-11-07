@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import LoginPage from './login_page';
+import MainPage from './main_page';
 import styled from "styled-components";
+
 
 const Container = styled.div`
   display: flex;
@@ -9,30 +12,11 @@ const Container = styled.div`
   background-color: #f0f0f0;
 `;
 
-const LoginButton = styled.button`
-  background-color: #1DB954; /* Spotify green */
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  font-size: 1em;
-  border-radius: 25px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-
-  &:hover {
-    background-color: #1AA34A; /* A slightly darker green for hover */
-  }
-`;
-
 function Home() {
     const [user, setUser] = useState(null);
 
-    const handleLogin = () => {
-        window.location.href = 'http://localhost:8888/login';
-    }
-    const handleLogout = () => {
-        window.location.href = 'http://localhost:8888/logout';
-    }
+
+
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const userData = urlParams.get('user');
@@ -45,16 +29,10 @@ function Home() {
         <div className="Home">
             <Container>
                 {!user && (
-                    <LoginButton onClick={handleLogin}>Login with Spotify</LoginButton>
+                    <LoginPage/>
                 )}
                 {user && (
-                <div>         
-                    <div>
-                        <h2>Welcome {user}</h2>
-                        
-                    </div>
-                    <button onClick={handleLogout}>Logout</button>
-                </div>
+                    <MainPage user={user}/>
                 )}
             </Container>
 
